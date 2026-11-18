@@ -1,314 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#10141b" />
-  <title>Neon Borough — Open World</title>
-  <style>
-    :root { color-scheme: dark; --bg:#10141b; --panel:rgba(20,26,35,.94); --muted:#9aa8b8; --cyan:#64e7d2; --gold:#ffd166; }
-    * { box-sizing:border-box }
-    body { margin:0; background:var(--bg); color:#f4f7fb; font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif; overflow:hidden }
-    button { font:inherit }
-    .app { display:grid; grid-template-columns:minmax(0,1fr) 320px; height:100vh; min-height:520px }
-    .stage { position:relative; min-width:0; overflow:hidden; background:#19222a }
-    canvas { display:block; width:100%; height:100%; image-rendering:pixelated }
-    .brand { position:absolute; top:20px; left:22px; pointer-events:none; text-shadow:0 2px 12px #000 }
-    .brand strong { display:block; font-size:20px; letter-spacing:.14em; text-transform:uppercase }
-    .brand span { color:var(--muted); font-size:11px; letter-spacing:.16em; text-transform:uppercase }
-    .top-hud { position:absolute; top:20px; right:20px; display:flex; gap:9px }
-    .pill { border:1px solid #ffffff20; background:#111821dc; padding:9px 13px; border-radius:12px; box-shadow:0 8px 24px #0004; font-weight:700; letter-spacing:.03em }
-    .pill small { display:block; color:var(--muted); font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.14em }
-    .speed { color:var(--cyan); min-width:76px; text-align:center }
-    .objective { position:absolute; left:50%; top:20px; transform:translateX(-50%); max-width:min(360px,45%); text-align:center; pointer-events:none; background:#111821df; border:1px solid #ffffff1c; border-radius:12px; padding:9px 16px; box-shadow:0 8px 24px #0004 }
-    .objective small { display:block; text-transform:uppercase; letter-spacing:.13em; color:var(--gold); font-size:9px; font-weight:800 }
-    .objective strong { font-size:12px }
-    .prompt { position:absolute; bottom:22px; left:50%; transform:translateX(-50%); background:#10151de8; border:1px solid #ffffff26; border-radius:10px; padding:9px 14px; color:#dce7ef; white-space:nowrap; box-shadow:0 8px 25px #0007 }
-    .prompt b { color:var(--cyan) }
-    .toast { position:absolute; left:50%; bottom:72px; transform:translate(-50%,10px); opacity:0; transition:.2s; background:#10151df2; border:1px solid #64e7d288; border-radius:10px; padding:10px 16px; pointer-events:none; white-space:nowrap }
-    .toast.show { opacity:1; transform:translate(-50%,0) }
-    aside { position:relative; z-index:2; background:#11161e; border-left:1px solid #ffffff12; padding:22px 18px; overflow:auto }
-    .side-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px }
-    .side-head h1 { margin:0; font-size:13px; text-transform:uppercase; letter-spacing:.16em }
-    .status { color:var(--cyan); font-size:10px; font-weight:800; letter-spacing:.12em }
-    .section-label { margin:22px 0 10px; color:#8d9aa9; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase }
-    .welcome { padding:15px; border:1px solid #ffffff16; border-radius:14px; background:linear-gradient(145deg,#1b2631,#151b24); }
-    .welcome h2 { margin:0 0 6px; font-size:17px }
-    .welcome p { margin:0; color:#aab6c3; font-size:12px }
-    .mission { padding:14px; margin-bottom:10px; border-radius:13px; border:1px solid #ffffff17; background:#171e27; transition:.18s }
-    .mission.active { border-color:#64e7d288; box-shadow:inset 3px 0 var(--cyan) }
-    .mission-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px }
-    .mission-num { color:var(--gold); font-size:9px; font-weight:900; letter-spacing:.14em; text-transform:uppercase }
-    .reward { color:#b5c3cf; font-size:10px }
-    .mission h3 { margin:0 0 5px; font-size:14px }
-    .mission p { margin:0 0 12px; color:#9eabb8; font-size:11px; line-height:1.5 }
-    .mission button { width:100%; color:#10161b; border:0; border-radius:8px; padding:9px 10px; background:var(--cyan); cursor:pointer; font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase }
-    .mission button:hover { filter:brightness(1.09) }
-    .mission button:disabled { background:#39434d; color:#c1cbd2; cursor:default }
-    .map-wrap { padding:8px; background:#171e27; border:1px solid #ffffff17; border-radius:12px }
-    #minimap { width:100%; height:142px; display:block; border-radius:7px; background:#202a30 }
-    .map-legend { display:flex; justify-content:space-between; margin-top:7px; color:#8e9ba8; font-size:10px }
-    .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px }
-    .control { background:#171e27; padding:9px; border-radius:9px; color:#9eabb8; font-size:10px }
-    kbd { display:inline-block; min-width:21px; margin-right:4px; padding:2px 5px; color:#eef4f7; border:1px solid #ffffff25; background:#202a34; border-radius:4px; text-align:center; font:700 9px ui-monospace,monospace }
-    .foot { color:#687583; font-size:10px; margin-top:17px; line-height:1.5 }
-    @media(max-width:760px) { .app{grid-template-columns:1fr;grid-template-rows:minmax(300px,1fr) 235px;height:100dvh}.stage{min-height:300px} aside{border-left:0;border-top:1px solid #ffffff12;padding:12px 14px}.side-head{margin-bottom:10px}.welcome{display:none}.section-label{margin:12px 0 7px}.mission-list{display:flex;gap:8px;overflow-x:auto}.mission{min-width:220px;margin:0}.map-wrap,.controls,.foot{display:none}.objective{top:68px;max-width:80%}.top-hud{top:16px;right:12px}.brand{top:15px;left:12px}.brand strong{font-size:15px}.brand span{font-size:8px}.pill{padding:7px 9px}.prompt{bottom:12px;font-size:11px} }
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#10141b">
+<title>Neon Borough — Free Roam</title>
+<style>
+:root{color-scheme:dark;--cyan:#64e7d2;--gold:#ffd166;--muted:#9aa8b8}*{box-sizing:border-box}body{margin:0;background:#10141b;color:#f4f7fb;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden}button{font:inherit}.app{display:grid;grid-template-columns:minmax(0,1fr) 310px;height:100vh;min-height:500px}.stage{position:relative;overflow:hidden;background:#19222a;min-width:0}canvas{display:block;width:100%;height:100%}.brand{position:absolute;top:17px;left:20px;text-shadow:0 2px 12px #000;pointer-events:none}.brand strong{display:block;font-size:19px;letter-spacing:.14em;text-transform:uppercase}.brand span{color:var(--muted);font-size:10px;letter-spacing:.15em;text-transform:uppercase}.hud{position:absolute;top:16px;right:17px;display:flex;gap:8px}.pill{border:1px solid #ffffff20;background:#111821e8;padding:8px 12px;border-radius:11px;box-shadow:0 8px 24px #0004;font-weight:800}.pill small{display:block;color:var(--muted);font-size:9px;letter-spacing:.13em;text-transform:uppercase}.toast{position:absolute;left:50%;bottom:70px;transform:translate(-50%,10px);opacity:0;transition:.18s;background:#10151df2;border:1px solid #64e7d288;border-radius:10px;padding:10px 15px;pointer-events:none;white-space:nowrap}.toast.show{opacity:1;transform:translate(-50%,0)}.prompt{position:absolute;bottom:17px;left:50%;transform:translateX(-50%);background:#10151de8;border:1px solid #ffffff26;border-radius:10px;padding:9px 13px;color:#dce7ef;white-space:nowrap;font-size:12px}.prompt b{color:var(--cyan)}aside{background:#11161e;border-left:1px solid #ffffff12;padding:20px 16px;overflow:auto}.side-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.side-head h1{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.16em}.status{color:var(--cyan);font-size:10px;font-weight:800;letter-spacing:.1em}.welcome{padding:13px;border:1px solid #ffffff16;border-radius:13px;background:linear-gradient(145deg,#1b2631,#151b24)}.welcome h2{margin:0 0 5px;font-size:16px}.welcome p{margin:0;color:#aab6c3;font-size:11px}.section{margin:17px 0 8px;color:#8d9aa9;font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.map-wrap{padding:7px;background:#171e27;border:1px solid #ffffff17;border-radius:11px}#minimap{width:100%;height:155px;display:block;border-radius:7px;background:#202a30}.legend{display:flex;justify-content:space-between;margin-top:6px;color:#9eabb8;font-size:9px}.legend span:first-child{color:var(--cyan)}.legend span:nth-child(2){color:var(--gold)}.controls{display:grid;grid-template-columns:1fr 1fr;gap:7px}.control{background:#171e27;padding:8px;border-radius:8px;color:#aab6c3;font-size:10px}kbd{display:inline-block;min-width:18px;margin-right:3px;padding:2px 4px;color:#eef4f7;border:1px solid #ffffff25;background:#202a34;border-radius:4px;text-align:center;font:700 9px ui-monospace,monospace}.note{font-size:10px;color:#71808d;line-height:1.55}.shop-modal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#05090dcc;z-index:5}.shop-modal.open{display:flex}.shop-card{width:min(410px,90%);border:1px solid #64e7d277;border-radius:16px;background:#151d26;padding:21px;box-shadow:0 20px 70px #000b}.shop-card .eyebrow{color:var(--cyan);font-size:10px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}.shop-card h2{margin:5px 0;font-size:23px}.shop-card p{color:#aab6c3;font-size:12px}.stock{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:17px 0;padding:14px;border:1px solid #ffffff1b;background:#1a242e;border-radius:11px}.stock strong{display:block}.stock small{color:#9eabb8}.buy,.close{border:0;border-radius:8px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}.buy{background:var(--cyan);color:#10161b}.buy:disabled{background:#39434d;color:#c1cbd2;cursor:default}.close{background:#2b3540;color:#e5edf2}.modal-actions{display:flex;justify-content:flex-end;gap:8px}.shop-card .quote{font-size:14px;color:#f4f7fb;font-weight:700;margin:8px 0 14px}
+@media(max-width:740px){.app{grid-template-columns:1fr;grid-template-rows:minmax(280px,1fr) 220px;height:100dvh}.stage{min-height:280px}aside{border-left:0;border-top:1px solid #ffffff12;padding:10px 12px}.side-head{margin-bottom:8px}.welcome{display:none}.section{margin:10px 0 6px}.map-wrap{display:none}.brand{top:12px;left:12px}.brand strong{font-size:15px}.brand span{font-size:8px}.hud{top:12px;right:10px}.pill{padding:7px 9px}.prompt{bottom:10px;font-size:10px}}
+</style>
 </head>
 <body>
-  <main class="app">
-    <section class="stage" aria-label="Game world">
-      <canvas id="game" aria-label="Neon Borough game canvas"></canvas>
-      <div class="brand"><strong>Neon Borough</strong><span>Free roam · East Harbor</span></div>
-      <div class="objective" id="objective"><small>Free roam</small><strong>Explore the city at your own pace</strong></div>
-      <div class="top-hud"><div class="pill"><small>Cash</small>$<span id="cash">250</span></div><div class="pill speed"><small>Speed</small><span id="speed">0</span> <small style="display:inline;color:inherit">KM/H</small></div></div>
-      <div class="toast" id="toast"></div>
-      <div class="prompt" id="prompt"><b>WASD</b> move &nbsp;·&nbsp; <b>E</b> enter / exit car</div>
-    </section>
-    <aside>
-      <div class="side-head"><h1>City Guide</h1><span class="status">● LIVE</span></div>
-      <div class="welcome"><h2>Your city. Your rules.</h2><p>Roam the streets, take the wheel, and pick a job whenever you're ready. The city is yours to explore.</p></div>
-      <div class="section-label">Available jobs</div>
-      <div class="mission-list" id="missionList"></div>
-      <div class="section-label">Neighborhood map</div>
-      <div class="map-wrap"><canvas id="minimap" width="280" height="142"></canvas><div class="map-legend"><span>● You</span><span>◆ Job location</span><span>East Harbor</span></div></div>
-      <div class="section-label">Controls</div>
-      <div class="controls"><div class="control"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move / drive</div><div class="control"><kbd>E</kbd> Enter / exit</div><div class="control"><kbd>SPACE</kbd> Handbrake</div><div class="control"><kbd>SHIFT</kbd> Sprint on foot</div></div>
-      <p class="foot">This is a fictional, non-violent city sandbox. Mission 1 is intentionally not included; jobs begin at Mission 2.</p>
-    </aside>
-  </main>
+<main class="app">
+<section class="stage" aria-label="Neon Borough game">
+<canvas id="game"></canvas>
+<div class="brand"><strong>Neon Borough</strong><span>Free roam · East Harbor</span></div>
+<div class="hud"><div class="pill"><small>Cash</small>$<span id="cash">250</span></div><div class="pill"><small>Equipment</small><span id="weapon">Unarmed</span></div></div>
+<div id="toast" class="toast"></div><div id="prompt" class="prompt"><b>WASD</b> move · find the gun store</div>
+<div id="shopModal" class="shop-modal" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+<div class="shop-card"><div class="eyebrow">East Harbor · Gun Store</div><h2 id="shopTitle">Welcome in.</h2><p class="quote">“Here's what's in stock.”</p><div class="stock"><div><strong>Glock Pistol</strong><small>Single pistol · $250</small></div><button id="buyButton" class="buy">Buy · $250</button></div><div class="modal-actions"><button id="closeShop" class="close">Close · Esc</button></div></div>
+</div>
+</section>
+<aside>
+<div class="side-head"><h1>City Guide</h1><span class="status">● FREE ROAM</span></div>
+<div class="welcome"><h2>Your city. Your rules.</h2><p>Explore the neighborhood, visit the marked gun store, and meet the locals.</p></div>
+<div class="section">Neighborhood map</div><div class="map-wrap"><canvas id="minimap" width="300" height="170" aria-label="Neighborhood map"></canvas><div class="legend"><span>● You</span><span>◆ Gun store</span><span>● Locals</span></div></div>
+<div class="section">Controls</div><div class="controls"><div class="control"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move / drive</div><div class="control"><kbd>E</kbd> Enter / exit</div><div class="control"><kbd>SPACE</kbd> Talk in store</div><div class="control"><kbd>CLICK</kbd> Fire pistol</div></div>
+<p class="note">Locals have 100 HP. The pistol deals 75 damage, with a chance to deal 100. Cash drops are randomized from $10–$35.</p>
+</aside>
+</main>
 <script>
-(() => {
-  'use strict';
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const mini = document.getElementById('minimap');
-  const mctx = mini.getContext('2d');
-  const cashEl = document.getElementById('cash');
-  const speedEl = document.getElementById('speed');
-  const promptEl = document.getElementById('prompt');
-  const objectiveEl = document.getElementById('objective');
-  const toastEl = document.getElementById('toast');
-  const TAU = Math.PI * 2;
-  const WORLD = 3600, BLOCK = 600, ROAD = 150;
-  const keys = new Set();
-  let viewW = 1, viewH = 1, dpr = 1, last = performance.now(), cash = 250;
-  const camera = {x: 0, y: 0};
-  const player = {x: 1815, y: 1840, angle: -Math.PI/2, inCar: false, walkSpeed: 205};
-  const cars = [
-    {x:1810,y:1870,angle:-Math.PI/2,color:'#ef695e',speed:0,parked:true,name:'Comet'},
-    {x:1555,y:1650,angle:0,color:'#e9bf55',speed:0,parked:true,name:'Taxi'},
-    {x:2420,y:2115,angle:Math.PI,color:'#5b99d5',speed:0,parked:true,name:'Coupe'},
-    {x:1160,y:2460,angle:Math.PI/2,color:'#9b78c9',speed:0,parked:true,name:'Violet'},
-    {x:2980,y:1470,angle:0,color:'#64b98a',speed:0,parked:true,name:'Greenline'}
-  ];
-  const missions = [
-    {id:2,title:'Harbor Courier',desc:'Pick up a parcel near the old market and deliver it to the East Harbor depot.',reward:180,start:{x:1550,y:1650},dest:{x:2940,y:2440},phase:0},
-    {id:3,title:'Scenic Circuit',desc:'Take a leisurely drive through the waterfront checkpoints and see the city.',reward:250,start:{x:2420,y:2115},dest:{x:900,y:930},phase:0}
-  ];
-  let activeMission = null;
-  let toastTimer = 0;
-  const buildings = [];
-  const parks = [];
-  const rand = (seed => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; })(140119);
-
-  function resize() {
-    const r = canvas.getBoundingClientRect();
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    viewW = Math.max(1, r.width); viewH = Math.max(1, r.height);
-    canvas.width = Math.round(viewW * dpr); canvas.height = Math.round(viewH * dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  window.addEventListener('resize', resize); resize();
-
-  // Deterministic city blocks: roads form a connected grid, with parks and varied buildings between them.
-  for (let gx=0; gx<6; gx++) for (let gy=0; gy<6; gy++) {
-    const x=gx*BLOCK+ROAD+18, y=gy*BLOCK+ROAD+18, size=BLOCK-ROAD-36;
-    if (rand()<.13) { parks.push({x,y,w:size,h:size,trees:7+Math.floor(rand()*7)}); continue; }
-    const cols=2+(rand()>.42?1:0), rows=2+(rand()>.4?1:0), gap=15;
-    const bw=(size-(cols+1)*gap)/cols, bh=(size-(rows+1)*gap)/rows;
-    for(let i=0;i<cols;i++) for(let j=0;j<rows;j++) {
-      let w=bw*(.76+rand()*.23), h=bh*(.76+rand()*.23);
-      buildings.push({x:x+gap+i*(bw+gap)+(bw-w)/2,y:y+gap+j*(bh+gap)+(bh-h)/2,w,h,tone:Math.floor(rand()*4),height:.5+rand()});
-    }
-  }
-  const districts = [
-    {x:420,y:455,label:'OLD MARKET',color:'#f4bd65'}, {x:1860,y:390,label:'MIDTOWN',color:'#7eb7d7'},
-    {x:2940,y:790,label:'NORTH END',color:'#c49ae8'}, {x:540,y:2180,label:'GARDEN ROW',color:'#8fd6a4'},
-    {x:1900,y:2490,label:'EAST HARBOR',color:'#69d8cb'}, {x:3000,y:2990,label:'SOUTH POINT',color:'#e99584'}
-  ];
-
-  function showToast(text) { toastEl.textContent=text; toastEl.classList.add('show'); toastTimer=2.3; }
-  function dist(a,b) { return Math.hypot(a.x-b.x,a.y-b.y); }
-  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-  function roundRect(c,x,y,w,h,r){ c.beginPath(); c.roundRect(x,y,w,h,r); }
-  function buildMissionCards() {
-    const list=document.getElementById('missionList'); list.innerHTML='';
-    for(const m of missions) {
-      const card=document.createElement('article'); card.className='mission'+(activeMission===m?' active':'');
-      const label=activeMission===m ? (m.phase===0?'IN PROGRESS':'DELIVERING') : 'AVAILABLE';
-      card.innerHTML=`<div class="mission-top"><span class="mission-num">Mission ${m.id} · ${label}</span><span class="reward">$${m.reward}</span></div><h3>${m.title}</h3><p>${m.desc}</p><button ${activeMission===m?'disabled':''} data-mission="${m.id}">${activeMission===m?'Job in progress':'Accept job'}</button>`;
-      list.appendChild(card);
-    }
-    list.querySelectorAll('button[data-mission]').forEach(btn=>btn.addEventListener('click',()=>{
-      const m=missions.find(x=>x.id===Number(btn.dataset.mission));
-      if(!m || activeMission) return;
-      activeMission=m; m.phase=0; showToast(`${m.title} accepted — head to the pickup marker.`); buildMissionCards();
-    }));
-  }
-  buildMissionCards();
-
-  function closestCar() { let found=null, d=90; for(const c of cars){const n=Math.hypot(c.x-player.x,c.y-player.y);if(n<d){d=n;found=c;}} return found; }
-  function interact() {
-    if(player.inCar) {
-      const c=player.inCar;
-      player.x=c.x+Math.cos(c.angle+Math.PI/2)*38; player.y=c.y+Math.sin(c.angle+Math.PI/2)*38;
-      player.angle=c.angle; player.inCar=false; c.speed=0;
-      showToast(`Exited ${c.name}.`);
-    } else {
-      const c=closestCar();
-      if(c){ player.inCar=c; player.x=c.x; player.y=c.y; showToast(`You got into the ${c.name}.`); }
-      else showToast('No car nearby — explore on foot.');
-    }
-  }
-  function onKey(e,down) {
-    const k=e.key.toLowerCase();
-    if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
-    if(down && !keys.has(k) && k==='e') interact();
-    if(down) keys.add(k); else keys.delete(k);
-  }
-  window.addEventListener('keydown',e=>onKey(e,true)); window.addEventListener('keyup',e=>onKey(e,false));
-  window.addEventListener('blur',()=>keys.clear());
-
-  function isBlocked(x,y,r=12) {
-    if(x<8||y<8||x>WORLD-8||y>WORLD-8) return true;
-    for(const b of buildings) if(x+r>b.x && x-r<b.x+b.w && y+r>b.y && y-r<b.y+b.h) return true;
-    return false;
-  }
-  function update(dt) {
-    if(player.inCar) {
-      const c=player.inCar;
-      const forward=keys.has('w')||keys.has('arrowup'), backward=keys.has('s')||keys.has('arrowdown');
-      const steer=(keys.has('a')||keys.has('arrowleft')?-1:0)+(keys.has('d')||keys.has('arrowright')?1:0);
-      const max=keys.has('shift')?440:370;
-      if(forward)c.speed=Math.min(max,c.speed+390*dt);
-      if(backward)c.speed=Math.max(-120,c.speed-330*dt);
-      if(!forward&&!backward)c.speed*=Math.pow(keys.has(' ')?0.035:0.42,dt);
-      const turnFactor=Math.min(1,Math.abs(c.speed)/95);
-      c.angle+=steer*2.15*turnFactor*dt*(c.speed>=0?1:-1);
-      let nx=c.x+Math.cos(c.angle)*c.speed*dt, ny=c.y+Math.sin(c.angle)*c.speed*dt;
-      if(!isBlocked(nx,ny,20)){c.x=nx;c.y=ny;} else {c.speed*=-.2;}
-      player.x=c.x; player.y=c.y; player.angle=c.angle;
-      speedEl.textContent=Math.round(Math.abs(c.speed)*.29);
-      promptEl.innerHTML='<b>WASD</b> drive &nbsp;·&nbsp; <b>E</b> exit &nbsp;·&nbsp; <b>SPACE</b> handbrake';
-    } else {
-      let dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);
-      let dy=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);
-      const mag=Math.hypot(dx,dy)||1; dx/=mag;dy/=mag;
-      const speed=player.walkSpeed*(keys.has('shift')?1.55:1);
-      const nx=player.x+dx*speed*dt,ny=player.y+dy*speed*dt;
-      if(!isBlocked(nx,player.y,9))player.x=nx;
-      if(!isBlocked(player.x,ny,9))player.y=ny;
-      if(dx||dy)player.angle=Math.atan2(dy,dx);
-      speedEl.textContent='0';
-      const near=closestCar();
-      promptEl.innerHTML=near?`<b>E</b> enter ${near.name} &nbsp;·&nbsp; <b>WASD</b> move &nbsp;·&nbsp; <b>SHIFT</b> sprint`:'<b>WASD</b> move &nbsp;·&nbsp; <b>E</b> enter / exit car';
-    }
-    camera.x+=(player.x-viewW/2-camera.x)*Math.min(1,dt*5);
-    camera.y+=(player.y-viewH/2-camera.y)*Math.min(1,dt*5);
-    camera.x=clamp(camera.x,0,Math.max(0,WORLD-viewW)); camera.y=clamp(camera.y,0,Math.max(0,WORLD-viewH));
-    cashEl.textContent=cash;
-    if(activeMission) {
-      const target=activeMission.phase===0?activeMission.start:activeMission.dest;
-      const label=activeMission.phase===0?'Pickup':'Drop-off';
-      objectiveEl.innerHTML=`<small>${activeMission.title} · ${label}</small><strong>${Math.round(dist(player,target))} m to the marker</strong>`;
-      if(dist(player,target)<62) {
-        if(activeMission.phase===0){ activeMission.phase=1; showToast('Package picked up — deliver it to the destination.'); buildMissionCards(); }
-        else {cash+=activeMission.reward;showToast(`Job complete! +$${activeMission.reward}`);activeMission=null;buildMissionCards();}
-      }
-    } else objectiveEl.innerHTML='<small>Free roam</small><strong>Explore the city at your own pace</strong>';
-    if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)toastEl.classList.remove('show');}
-  }
-
-  function drawRoads() {
-    ctx.fillStyle='#28343a';ctx.fillRect(0,0,WORLD,WORLD);
-    // city roads
-    for(let i=0;i<=6;i++){
-      const p=i*BLOCK;
-      ctx.fillStyle='#333f45';ctx.fillRect(p,0,ROAD,WORLD);ctx.fillRect(0,p,WORLD,ROAD);
-      ctx.fillStyle='#d8bd6a';ctx.globalAlpha=.42;
-      for(let y=20;y<WORLD;y+=42){ctx.fillRect(p+ROAD/2-1,y,2,18);}
-      for(let x=20;x<WORLD;x+=42){ctx.fillRect(x,p+ROAD/2-1,18,2);}
-      ctx.globalAlpha=1;
-      // sidewalks
-      ctx.fillStyle='#53605f';ctx.fillRect(p+ROAD-7,0,7,WORLD);ctx.fillRect(0,p+ROAD-7,WORLD,7);
-      ctx.fillStyle='#52605f';ctx.fillRect(p,0,7,WORLD);ctx.fillRect(0,p,WORLD,7);
-    }
-    for(const park of parks){
-      ctx.fillStyle='#426b53';roundRect(ctx,park.x,park.y,park.w,park.h,10);ctx.fill();
-      ctx.strokeStyle='#7fa878';ctx.lineWidth=3;ctx.strokeRect(park.x+12,park.y+12,park.w-24,park.h-24);
-      for(let i=0;i<park.trees;i++){let tx=park.x+24+rand()* (park.w-48),ty=park.y+24+rand()*(park.h-48);ctx.fillStyle='#31533f';ctx.beginPath();ctx.arc(tx+3,ty+4,11,0,TAU);ctx.fill();ctx.fillStyle='#649269';ctx.beginPath();ctx.arc(tx,ty,10,0,TAU);ctx.fill();}
-    }
-    const colors=['#586168','#645f5b','#515b61','#65666a'];
-    for(const b of buildings){
-      ctx.fillStyle='#1c2429';roundRect(ctx,b.x+7,b.y+9,b.w,b.h,7);ctx.fill();
-      ctx.fillStyle=colors[b.tone];roundRect(ctx,b.x,b.y,b.w,b.h,7);ctx.fill();
-      ctx.fillStyle='#ffffff0b';ctx.fillRect(b.x+8,b.y+7,b.w-16,4);
-      ctx.fillStyle='#323b40';ctx.fillRect(b.x+12,b.y+14,b.w-24,b.h-28);
-      ctx.fillStyle='#d5bc78';
-      const wx=Math.max(2,Math.floor((b.w-26)/28)), wy=Math.max(2,Math.floor((b.h-28)/30));
-      for(let i=0;i<wx;i++)for(let j=0;j<wy;j++) if((i+j+b.tone)%3!==0)ctx.fillRect(b.x+17+i*28,b.y+19+j*30,8,7);
-      ctx.fillStyle='#11191d';ctx.fillRect(b.x+b.w/2-8,b.y+b.h-15,16,15);
-    }
-    // district labels
-    for(const d of districts){ctx.save();ctx.globalAlpha=.52;ctx.fillStyle=d.color;ctx.font='800 16px system-ui';ctx.textAlign='center';ctx.letterSpacing='3px';ctx.fillText(d.label,d.x,d.y);ctx.restore();}
-  }
-  function drawCar(c) {
-    ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.angle);
-    ctx.fillStyle='#0008';roundRect(ctx,-27,-12,58,29,8);ctx.fill();
-    ctx.fillStyle=c.color;roundRect(ctx,-30,-14,60,28,8);ctx.fill();
-    ctx.fillStyle='#b8d7dc';roundRect(ctx,-11,-11,25,22,6);ctx.fill();
-    ctx.fillStyle='#52676b';ctx.fillRect(-8,-9,10,18);ctx.fillRect(4,-9,7,18);
-    ctx.fillStyle='#fff0b0';ctx.fillRect(24,-9,4,6);ctx.fillRect(24,3,4,6);
-    ctx.fillStyle='#f17b68';ctx.fillRect(-29,-9,3,5);ctx.fillRect(-29,4,3,5);
-    ctx.fillStyle='#171d21';ctx.fillRect(-18,-16,11,4);ctx.fillRect(10,-16,11,4);ctx.fillRect(-18,12,11,4);ctx.fillRect(10,12,11,4);
-    ctx.restore();
-  }
-  function drawPlayer() {
-    if(player.inCar)return;
-    ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.angle);
-    ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(2,5,9,6,0,0,TAU);ctx.fill();
-    ctx.fillStyle='#63e4d1';ctx.beginPath();ctx.arc(0,0,8,0,TAU);ctx.fill();
-    ctx.fillStyle='#f0c69a';ctx.beginPath();ctx.arc(5,0,4,0,TAU);ctx.fill();
-    ctx.fillStyle='#e7f2ef';ctx.fillRect(-2,-3,6,2);
-    ctx.restore();
-  }
-  function drawMissionMarker() {
-    if(!activeMission)return;
-    const p=activeMission.phase===0?activeMission.start:activeMission.dest;
-    const pulse=1+Math.sin(performance.now()/180)*.12;
-    ctx.save();ctx.translate(p.x,p.y);ctx.strokeStyle=activeMission.phase===0?'#ffd166':'#64e7d2';ctx.lineWidth=4;
-    ctx.beginPath();ctx.arc(0,0,27*pulse,0,TAU);ctx.stroke();ctx.globalAlpha=.25;ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.arc(0,0,25*pulse,0,TAU);ctx.fill();ctx.globalAlpha=1;
-    ctx.fillStyle='#fff';ctx.font='900 11px system-ui';ctx.textAlign='center';ctx.fillText(activeMission.phase===0?'PICKUP':'DROP',0,4);ctx.restore();
-  }
-  function render() {
-    ctx.clearRect(0,0,viewW,viewH);
-    ctx.save();ctx.translate(-camera.x,-camera.y);drawRoads();
-    for(const c of cars)drawCar(c);
-    drawMissionMarker();drawPlayer();ctx.restore();
-    drawMinimap();
-  }
-  function drawMinimap(){
-    const w=mini.width,h=mini.height,sx=w/WORLD,sy=h/WORLD;
-    mctx.clearRect(0,0,w,h);mctx.fillStyle='#27343a';mctx.fillRect(0,0,w,h);
-    mctx.fillStyle='#465156';for(let i=0;i<=6;i++){mctx.fillRect(i*BLOCK*sx,0,ROAD*sx,h);mctx.fillRect(0,i*BLOCK*sy,w,ROAD*sy);}
-    mctx.fillStyle='#747a76';for(const b of buildings)mctx.fillRect(b.x*sx,b.y*sy,b.w*sx,b.h*sy);
-    if(activeMission){const p=activeMission.phase===0?activeMission.start:activeMission.dest;mctx.fillStyle='#ffd166';mctx.beginPath();mctx.moveTo(p.x*sx,p.y*sy-5);mctx.lineTo(p.x*sx+5,p.y*sy);mctx.lineTo(p.x*sx,p.y*sy+5);mctx.lineTo(p.x*sx-5,p.y*sy);mctx.fill();}
-    mctx.fillStyle='#64e7d2';mctx.beginPath();mctx.arc(player.x*sx,player.y*sy,4,0,TAU);mctx.fill();
-    mctx.strokeStyle='#64e7d277';mctx.lineWidth=1;mctx.strokeRect(camera.x*sx,camera.y*sy,viewW*sx,viewH*sy);
-  }
-  function frame(now){const dt=Math.min(.04,(now-last)/1000);last=now;update(dt);render();requestAnimationFrame(frame);}
-  requestAnimationFrame(frame);
+(()=>{'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),mini=document.getElementById('minimap'),mctx=mini.getContext('2d');
+const cashEl=document.getElementById('cash'),weaponEl=document.getElementById('weapon'),promptEl=document.getElementById('prompt'),toastEl=document.getElementById('toast'),shopModal=document.getElementById('shopModal'),buyButton=document.getElementById('buyButton');
+const WORLD=3600,BLOCK=600,ROAD=150,TAU=Math.PI*2,keys=new Set();let w=1,h=1,dpr=1,last=performance.now(),cash=250,hasPistol=false,toastTimer=0,shotFlash=0;
+const player={x:1815,y:1845,angle:-Math.PI/2,inCar:false,inside:false,speed:205};const camera={x:0,y:0};const buildings=[],parks=[],npcs=[],drops=[],cars=[{x:1810,y:1870,angle:-Math.PI/2,color:'#ef695e',speed:0,name:'Comet'},{x:1555,y:1650,angle:0,color:'#e9bf55',speed:0,name:'Taxi'},{x:2420,y:2115,angle:Math.PI,color:'#5b99d5',speed:0,name:'Coupe'}];
+const shop={x:1515,y:1545,w:270,h:220,door:{x:1650,y:1770},clerk:{x:1650,y:1600}};
+let seed=140119;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}function clamp(v,a,b){return Math.max(a,Math.min(b,v))}function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}function rounded(c,x,y,ww,hh,r){c.beginPath();c.roundRect(x,y,ww,hh,r)}
+function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);w=Math.max(1,r.width);h=Math.max(1,r.height);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
+// Build a connected street grid with one dedicated gun-store block.
+for(let gx=0;gx<6;gx++)for(let gy=0;gy<6;gy++){const x=gx*BLOCK+ROAD+18,y=gy*BLOCK+ROAD+18,size=BLOCK-ROAD-36;if(gx===2&&gy===2)continue;if(rand()<.13){parks.push({x,y,w:size,h:size,trees:8+Math.floor(rand()*6)});continue}const cols=2+(rand()>.42?1:0),rows=2+(rand()>.4?1:0),gap=15,bw=(size-(cols+1)*gap)/cols,bh=(size-(rows+1)*gap)/rows;for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){const bw2=bw*(.76+rand()*.23),bh2=bh*(.76+rand()*.23);buildings.push({x:x+gap+i*(bw+gap)+(bw-bw2)/2,y:y+gap+j*(bh+gap)+(bh-bh2)/2,w:bw2,h:bh2,tone:Math.floor(rand()*4)})}}
+buildings.push({x:shop.x,y:shop.y,w:shop.w,h:shop.h,tone:1,store:true});
+function blocked(x,y,r=10){if(x<8||y<8||x>WORLD-8||y>WORLD-8)return true;for(const b of buildings){if(b.store&&player.inside)continue;if(x+r>b.x&&x-r<b.x+b.w&&y+r>b.y&&y-r<b.y+b.h)return true}return false}
+function randomOpenPoint(){for(let i=0;i<200;i++){const p={x:100+rand()*(WORLD-200),y:100+rand()*(WORLD-200)};if(!blocked(p.x,p.y,18)&&distance(p,player)>220&&distance(p,shop)>130)return p}return{x:800+rand()*400,y:800+rand()*400}}
+for(let i=0;i<22;i++){const p=randomOpenPoint();npcs.push({x:p.x,y:p.y,angle:rand()*TAU,hp:100,maxHp:100,alive:true,target:null,think:rand()*2,hit:0,color:['#e6ad76','#d48777','#a9c1d0','#c7a8df','#92cda7'][i%5],name:i===0?'Shopkeeper':'Local'})}
+const districts=[{x:420,y:455,label:'OLD MARKET',color:'#f4bd65'},{x:1860,y:390,label:'MIDTOWN',color:'#7eb7d7'},{x:2940,y:790,label:'NORTH END',color:'#c49ae8'},{x:540,y:2180,label:'GARDEN ROW',color:'#8fd6a4'},{x:1900,y:2490,label:'EAST HARBOR',color:'#69d8cb'},{x:3000,y:2990,label:'SOUTH POINT',color:'#e99584'}];
+function toast(t){toastEl.textContent=t;toastEl.classList.add('show');toastTimer=2.2}function nearestCar(){let found=null,d=85;for(const c of cars){const n=Math.hypot(c.x-player.x,c.y-player.y);if(n<d){found=c;d=n}}return found}function closestNpc(){let found=null,d=72;for(const n of npcs)if(n.alive&&n.name==='Shopkeeper'){const z=distance(n,player);if(z<d){found=n;d=z}}return found}
+function enterExit(){if(player.inside){player.inside=false;player.x=shop.door.x;player.y=shop.door.y+30;toast('Back on the street.');return}if(player.inCar){const c=player.inCar;player.x=c.x+Math.cos(c.angle+Math.PI/2)*34;player.y=c.y+Math.sin(c.angle+Math.PI/2)*34;player.inCar=false;c.speed=0;return}if(distance(player,shop.door)<85){player.inside=true;player.x=w/2;player.y=h-85;player.inCar=false;toast('Welcome to the gun store.');return}const c=nearestCar();if(c){player.inCar=c;toast(`You got into the ${c.name}.`)}}
+function openShop(){if(!player.inside)return;shopModal.classList.add('open');updateBuyButton()}function closeShop(){shopModal.classList.remove('open')}function updateBuyButton(){buyButton.disabled=hasPistol||cash<250;buyButton.textContent=hasPistol?'Purchased':cash<250?'Need $250':'Buy · $250'}buyButton.addEventListener('click',()=>{if(hasPistol)return;if(cash<250){toast('You need $250 to buy the pistol.');return}cash-=250;hasPistol=true;weaponEl.textContent='Glock Pistol';updateBuyButton();toast('Glock Pistol purchased. Click to fire.')});document.getElementById('closeShop').addEventListener('click',closeShop);
+function keyDown(e){const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(k==='escape'&&shopModal.classList.contains('open')){closeShop();return}if(!keys.has(k)){if(k==='e')enterExit();if(k===' '){if(shopModal.classList.contains('open'))return;if(player.inside&&distance(player,shop.clerk)<120)openShop();else if(player.inside)toast('Move closer to the store worker.')}}keys.add(k)}function keyUp(e){keys.delete(e.key.toLowerCase())}addEventListener('keydown',keyDown);addEventListener('keyup',keyUp);addEventListener('blur',()=>keys.clear());
+function worldPoint(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left+camera.x,y:e.clientY-r.top+camera.y}}function chooseDrop(){const amounts=[10,15,20,25,30,35],weights=[38,26,17,10,6,3],total=weights.reduce((a,b)=>a+b,0);let r=rand()*total;for(let i=0;i<weights.length;i++){r-=weights[i];if(r<=0)return amounts[i]}return 10}
+function shoot(e){if(!hasPistol||player.inside||player.inCar||shopModal.classList.contains('open'))return;const target=worldPoint(e);player.angle=Math.atan2(target.y-player.y,target.x-player.x);shotFlash=.09;let victim=null,best=34;for(const n of npcs){if(!n.alive)continue;const vx=n.x-player.x,vy=n.y-player.y,len=Math.hypot(vx,vy);if(len>620)continue;const along=(vx*Math.cos(player.angle)+vy*Math.sin(player.angle));if(along<0||along>len)continue;const perp=Math.abs(vx*Math.sin(player.angle)-vy*Math.cos(player.angle));if(perp<best){best=perp;victim=n}}if(victim){const damage=rand()<.2?100:75;victim.hp=Math.max(0,victim.hp-damage);victim.hit=.22;if(victim.hp===0){victim.alive=false;const amount=chooseDrop();drops.push({x:victim.x,y:victim.y,amount});toast(`Local down — $${amount} dropped nearby.`)}else toast(`${damage} damage · ${victim.hp} HP remaining`)}else toast('Shot fired.')}
+canvas.addEventListener('pointerdown',shoot);
+function update(dt){if(shopModal.classList.contains('open')){cashEl.textContent=cash;return}if(player.inside){const dx=(keys.has('d')?1:0)-(keys.has('a')?1:0),dy=(keys.has('s')?1:0)-(keys.has('w')?1:0),mag=Math.hypot(dx,dy)||1;player.x=clamp(player.x+dx/mag*190*dt,35,w-35);player.y=clamp(player.y+dy/mag*190*dt,80,h-35);if(distance(player,shop.clerk)<120)promptEl.innerHTML='<b>SPACE</b> talk to the worker · <b>E</b> exit';else promptEl.innerHTML='<b>WASD</b> move around · find the worker · <b>E</b> exit';objectiveShop();}
+else if(player.inCar){const c=player.inCar,forward=keys.has('w')||keys.has('arrowup'),back=keys.has('s')||keys.has('arrowdown'),steer=(keys.has('a')||keys.has('arrowleft')?-1:0)+(keys.has('d')||keys.has('arrowright')?1:0);if(forward)c.speed=Math.min(370,c.speed+390*dt);if(back)c.speed=Math.max(-120,c.speed-330*dt);if(!forward&&!back)c.speed*=Math.pow(keys.has(' ')?0.035:.42,dt);c.angle+=steer*2.15*Math.min(1,Math.abs(c.speed)/95)*dt*(c.speed>=0?1:-1);const nx=c.x+Math.cos(c.angle)*c.speed*dt,ny=c.y+Math.sin(c.angle)*c.speed*dt;if(!blocked(nx,ny,20)){c.x=nx;c.y=ny}else c.speed*=-.2;player.x=c.x;player.y=c.y;player.angle=c.angle;promptEl.innerHTML='<b>WASD</b> drive · <b>E</b> exit';}
+else{let dx=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0),dy=(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0),mag=Math.hypot(dx,dy)||1;dx/=mag;dy/=mag;const speed=player.speed*(keys.has('shift')?1.5:1),nx=player.x+dx*speed*dt,ny=player.y+dy*speed*dt;if(!blocked(nx,player.y,9))player.x=nx;if(!blocked(player.x,ny,9))player.y=ny;if(dx||dy)player.angle=Math.atan2(dy,dx);if(distance(player,shop.door)<100)promptEl.innerHTML='<b>E</b> enter gun store';else if(nearestCar())promptEl.innerHTML='<b>E</b> enter car · <b>WASD</b> move';else promptEl.innerHTML=hasPistol?'<b>WASD</b> move · click to fire · <b>E</b> enter car':'<b>WASD</b> move · find the ◆ gun store';}
+for(const n of npcs){if(n.hit>0)n.hit-=dt;if(!n.alive)continue;n.think-=dt;if(!n.target||n.think<=0){n.think=1.5+rand()*3;const a=rand()*TAU,len=45+rand()*150;n.target={x:clamp(n.x+Math.cos(a)*len,20,WORLD-20),y:clamp(n.y+Math.sin(a)*len,20,WORLD-20)}}const d=distance(n,n.target);if(d>4){const vx=(n.target.x-n.x)/d,vy=(n.target.y-n.y)/d,nx=n.x+vx*24*dt,ny=n.y+vy*24*dt;if(!blocked(nx,n.y,9))n.x=nx;else n.target=null;if(!blocked(n.x,ny,9))n.y=ny;else n.target=null;n.angle=Math.atan2(vy,vx)}}
+for(let i=drops.length-1;i>=0;i--){if(distance(player,drops[i])<30){cash+=drops[i].amount;toast(`Picked up $${drops[i].amount}.`);drops.splice(i,1)}}camera.x+=(player.x-w/2-camera.x)*Math.min(1,dt*5);camera.y+=(player.y-h/2-camera.y)*Math.min(1,dt*5);camera.x=clamp(camera.x,0,Math.max(0,WORLD-w));camera.y=clamp(camera.y,0,Math.max(0,WORLD-h));cashEl.textContent=cash;if(shotFlash>0)shotFlash-=dt;if(toastTimer>0){toastTimer-=dt;if(toastTimer<=0)toastEl.classList.remove('show')} }
+function objectiveShop(){/* Interior prompt is handled by the bottom control hint. */}
+function drawGround(){ctx.fillStyle='#28343a';ctx.fillRect(0,0,WORLD,WORLD);for(let i=0;i<=6;i++){const p=i*BLOCK;ctx.fillStyle='#333f45';ctx.fillRect(p,0,ROAD,WORLD);ctx.fillRect(0,p,WORLD,ROAD);ctx.fillStyle='#d8bd6a';ctx.globalAlpha=.4;for(let q=20;q<WORLD;q+=42){ctx.fillRect(p+ROAD/2-1,q,2,18);ctx.fillRect(q,p+ROAD/2-1,18,2)}ctx.globalAlpha=1;ctx.fillStyle='#53605f';ctx.fillRect(p+ROAD-7,0,7,WORLD);ctx.fillRect(0,p+ROAD-7,WORLD,7);ctx.fillRect(p,0,7,WORLD);ctx.fillRect(0,p, WORLD,7)}for(const park of parks){ctx.fillStyle='#426b53';rounded(ctx,park.x,park.y,park.w,park.h,10);ctx.fill();for(let i=0;i<park.trees;i++){const x=park.x+24+rand()*(park.w-48),y=park.y+24+rand()*(park.h-48);ctx.fillStyle='#31533f';ctx.beginPath();ctx.arc(x+3,y+4,11,0,TAU);ctx.fill();ctx.fillStyle='#649269';ctx.beginPath();ctx.arc(x,y,10,0,TAU);ctx.fill()}}const colors=['#586168','#645f5b','#515b61','#65666a'];for(const b of buildings){if(b.store){ctx.fillStyle='#17211e';rounded(ctx,b.x-7,b.y-7,b.w+14,b.h+14,11);ctx.fill();ctx.fillStyle='#96633e';rounded(ctx,b.x,b.y,b.w,b.h,7);ctx.fill();ctx.fillStyle='#f4cf77';ctx.fillRect(b.x+28,b.y+12,b.w-56,24);ctx.fillStyle='#1b2827';ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillText('GUN STORE',b.x+b.w/2,b.y+29);ctx.fillStyle='#b8d7dc';ctx.fillRect(shop.door.x-18,shop.door.y-8,36,14);ctx.fillStyle='#f8c943';ctx.beginPath();ctx.moveTo(shop.door.x,shop.door.y-50);ctx.lineTo(shop.door.x+10,shop.door.y-40);ctx.lineTo(shop.door.x,shop.door.y-30);ctx.lineTo(shop.door.x-10,shop.door.y-40);ctx.fill();continue}ctx.fillStyle='#1c2429';rounded(ctx,b.x+7,b.y+9,b.w,b.h,7);ctx.fill();ctx.fillStyle=colors[b.tone];rounded(ctx,b.x,b.y,b.w,b.h,7);ctx.fill();ctx.fillStyle='#323b40';ctx.fillRect(b.x+12,b.y+14,b.w-24,b.h-28);ctx.fillStyle='#d5bc78';const wx=Math.max(2,Math.floor((b.w-26)/28)),wy=Math.max(2,Math.floor((b.h-28)/30));for(let i=0;i<wx;i++)for(let j=0;j<wy;j++)if((i+j+b.tone)%3!==0)ctx.fillRect(b.x+17+i*28,b.y+19+j*30,8,7)}for(const d of districts){ctx.save();ctx.globalAlpha=.48;ctx.fillStyle=d.color;ctx.font='800 16px system-ui';ctx.textAlign='center';ctx.letterSpacing='3px';ctx.fillText(d.label,d.x,d.y);ctx.restore()}}
+function drawCharacter(x,y,angle,color,scale=1){ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(2,5,9,6,0,0,TAU);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.arc(0,0,8,0,TAU);ctx.fill();ctx.fillStyle='#f0c69a';ctx.beginPath();ctx.arc(5,0,4,0,TAU);ctx.fill();ctx.restore()}
+function drawCar(c){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.angle);ctx.fillStyle='#0008';rounded(ctx,-27,-12,58,29,8);ctx.fill();ctx.fillStyle=c.color;rounded(ctx,-30,-14,60,28,8);ctx.fill();ctx.fillStyle='#b8d7dc';rounded(ctx,-11,-11,25,22,6);ctx.fill();ctx.fillStyle='#52676b';ctx.fillRect(-8,-9,10,18);ctx.fillRect(4,-9,7,18);ctx.fillStyle='#fff0b0';ctx.fillRect(24,-9,4,6);ctx.fillRect(24,3,4,6);ctx.restore()}
+function drawWorld(){if(player.inside){ctx.fillStyle='#222b30';ctx.fillRect(0,0,w,h);ctx.fillStyle='#664932';ctx.fillRect(24,24,w-48,h-48);ctx.fillStyle='#8c6543';ctx.fillRect(38,38,w-76,h-76);ctx.fillStyle='#34444a';ctx.fillRect(58,58,w-116,h-116);ctx.fillStyle='#d4b86e';ctx.font='900 18px system-ui';ctx.textAlign='center';ctx.fillText('EAST HARBOR GUN STORE',w/2,92);ctx.fillStyle='#a77a4e';ctx.fillRect(w/2-75,125,150,35);ctx.fillStyle='#241b17';ctx.font='bold 11px system-ui';ctx.fillText('HERE\'S WHAT\'S IN STOCK',w/2,147);drawCharacter(w/2,h/2-25,Math.PI/2,'#d7a47c',1.25);ctx.fillStyle='#f4f1de';ctx.font='bold 12px system-ui';ctx.fillText('STORE WORKER',w/2,h/2+3);drawCharacter(player.x,player.y,player.angle,'#64e7d2',1.15);return}ctx.save();ctx.translate(-camera.x,-camera.y);drawGround();for(const c of cars)drawCar(c);for(const n of npcs){if(!n.alive)continue;drawCharacter(n.x,n.y,n.angle,n.name==='Shopkeeper'?'#f0bf74':n.color);if(n.hit>0){ctx.strokeStyle='#ff7777';ctx.lineWidth=3;ctx.beginPath();ctx.arc(n.x,n.y,13,0,TAU);ctx.stroke()}ctx.fillStyle='#12191d';ctx.fillRect(n.x-13,n.y-21,26,4);ctx.fillStyle='#e9766e';ctx.fillRect(n.x-13,n.y-21,26*(n.hp/100),4);if(n.name==='Shopkeeper'){ctx.fillStyle='#ffe2a0';ctx.font='10px system-ui';ctx.textAlign='center';ctx.fillText('SHOP',n.x,n.y-28)}}for(const d of drops){ctx.fillStyle='#ffd166';ctx.beginPath();ctx.arc(d.x,d.y,8,0,TAU);ctx.fill();ctx.fillStyle='#352917';ctx.font='900 8px system-ui';ctx.textAlign='center';ctx.fillText('$',d.x,d.y+3)}drawCharacter(player.x,player.y,player.angle,'#64e7d2');if(shotFlash>0){ctx.strokeStyle='#ffe9a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(player.x,player.y);ctx.lineTo(player.x+Math.cos(player.angle)*42,player.y+Math.sin(player.angle)*42);ctx.stroke()}ctx.restore()}
+function drawMap(){const mw=mini.width,mh=mini.height,sx=mw/WORLD,sy=mh/WORLD;mctx.clearRect(0,0,mw,mh);mctx.fillStyle='#27343a';mctx.fillRect(0,0,mw,mh);mctx.fillStyle='#465156';for(let i=0;i<=6;i++){mctx.fillRect(i*BLOCK*sx,0,ROAD*sx,mh);mctx.fillRect(0,i*BLOCK*sy,mw,ROAD*sy)}mctx.fillStyle='#777b76';for(const b of buildings)mctx.fillRect(b.x*sx,b.y*sy,b.w*sx,b.h*sy);mctx.fillStyle='#ffd166';mctx.beginPath();mctx.moveTo((shop.x+shop.w/2)*sx,(shop.y+shop.h/2)*sy-6);mctx.lineTo((shop.x+shop.w/2)*sx+6,(shop.y+shop.h/2)*sy);mctx.lineTo((shop.x+shop.w/2)*sx,(shop.y+shop.h/2)*sy+6);mctx.lineTo((shop.x+shop.w/2)*sx-6,(shop.y+shop.h/2)*sy);mctx.fill();for(const n of npcs)if(n.alive){mctx.fillStyle=n.name==='Shopkeeper'?'#f0bf74':'#e98b7d';mctx.beginPath();mctx.arc(n.x*sx,n.y*sy,2,0,TAU);mctx.fill()}if(!player.inside){mctx.fillStyle='#64e7d2';mctx.beginPath();mctx.arc(player.x*sx,player.y*sy,4,0,TAU);mctx.fill();mctx.strokeStyle='#64e7d277';mctx.strokeRect(camera.x*sx,camera.y*sy,w*sx,h*sy)}}
+function render(){ctx.clearRect(0,0,w,h);drawWorld();drawMap()}function frame(now){const dt=Math.min(.04,(now-last)/1000);last=now;update(dt);render();requestAnimationFrame(frame)}requestAnimationFrame(frame);
 })();
 </script>
 </body>
